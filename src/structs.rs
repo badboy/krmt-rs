@@ -24,8 +24,8 @@ pub struct redisModule {
     pub redis_version: *const u8,
     pub module_version: *const u8,
     pub name: *const u8,
-    pub load: Option<extern "C" fn()>,
-    pub cleanup: Option<extern "C" fn() -> *const c_void>,
+    pub load: Option<extern "C" fn() -> *const c_void>,
+    pub cleanup: Option<extern "C" fn()>,
 }
 
 // It's not

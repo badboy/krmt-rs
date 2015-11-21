@@ -10,6 +10,8 @@ mod raw;
 mod structs;
 mod redis;
 
+use std::ptr::null;
+
 use redis::Client;
 use structs::{redisCommand,redisModule};
 
@@ -33,6 +35,8 @@ pub extern "C" fn rust_command(client: Client) {
 }
 
 #[no_mangle]
-pub extern "C" fn load() {
+pub extern "C" fn load() -> *const libc::c_void {
     println!("Rust Module loaded");
+
+    null()
 }
