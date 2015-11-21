@@ -1,0 +1,12 @@
+[package]
+
+name = "pong"
+version = "0.0.1"
+authors = ["Jan-Erik Rediger <janerik@fnordig.de>"]
+
+[lib]
+name = "pong"
+crate_type = ["dylib"]
+
+[dependencies]
+libc = "0.2.2"
