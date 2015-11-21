@@ -10,6 +10,6 @@ pub fn add_reply(client: Client, reply: &str) {
     unsafe {
         let reply = format!("{}\r\n\0", reply);
         let bytes = reply.as_bytes();
-        addReplyString(client, bytes.as_ptr(), bytes.len()-1);
+        addReplyString(client, bytes.as_ptr(), bytes.len() - 1);
     }
 }

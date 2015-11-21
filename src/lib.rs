@@ -13,7 +13,7 @@ mod redis;
 use std::ptr::null;
 
 use redis::Client;
-use structs::{redisCommand,redisModule};
+use structs::{redisCommand, redisModule};
 
 REDIS_MODULE_DETAIL!(
     "de.fnordig.test.rust",

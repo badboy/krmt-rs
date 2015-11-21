@@ -46,8 +46,7 @@ impl redisCommand {
             lastkey: 0,
             keystep: 0,
             microseconds: 0,
-            calls: 0
+            calls: 0,
         }
     }
 }
-
