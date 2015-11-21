@@ -10,3 +10,7 @@ crate_type = ["dylib"]
 
 [dependencies]
 libc = "0.2.2"
+
+[dependencies.concat_bytes]
+git = "https://github.com/badboy/concat_bytes"
+branch = "binary-to-bytestr"

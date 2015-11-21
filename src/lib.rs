@@ -1,34 +1,35 @@
 #![feature(const_fn)]
 #![feature(linkage)]
+#![feature(plugin)]
+#![plugin(concat_bytes)]
 
 extern crate libc;
-use libc::{c_void, c_int};
+use libc::c_int;
 
 #[macro_use]
 mod raw;
 mod structs;
 mod redis;
 
+use redis::Client;
+
 use structs::{redisCommand,redisModule};
 
-const REDIS_MODULE_COMMAND : c_int = 1;
-const REDIS_VERSION : *const u8 = b"2.9.999" as *const u8;
-
 REDIS_MODULE_DETAIL!(
-    b"de.fnordig.test.rust\0",
-    b"0.0001\0",
+    "de.fnordig.test.rust",
+    "0.0001",
     Some(load),
     None
 );
 
 REDIS_COMMAND_TABLE!(
     2,
-    [b"rust\0", Some(rust_command), 1, b"rt", None, 0,0,0],
-    [b"dumdidum\0", Some(rust_command), 1, b"rt", None, 0,0,0]
+    ["rust", Some(rust_command), 1, "rt", None, 0,0,0],
+    ["dumdidum", Some(rust_command), 1, "rt", None, 0,0,0]
 );
 
 #[no_mangle]
-pub extern "C" fn rust_command(client: *const c_void) {
+pub extern "C" fn rust_command(client: Client) {
     let hello = "+Hello, this is Rust!";
     redis::add_reply(client, hello)
 }

@@ -1,12 +1,15 @@
 macro_rules! REDIS_MODULE_DETAIL (
     ($name:expr, $module_version:expr, $load:expr, $cleanup:expr) => (
+        const REDIS_MODULE_COMMAND : c_int = 1;
+        const REDIS_VERSION : *const u8 = b"2.9.999" as *const u8;
+
         #[no_mangle]
         #[allow(non_upper_case_globals)]
         pub static redisModuleDetail : redisModule = redisModule {
             type_: REDIS_MODULE_COMMAND,
             redis_version: REDIS_VERSION,
-            module_version: $module_version as *const u8,
-            name: $name as *const u8,
+            module_version: concat_bytes!($module_version, b'\0') as *const u8,
+            name: concat_bytes!($name, b'\0') as *const u8,
             load: $load,
             cleanup: $cleanup,
         };
@@ -21,10 +24,10 @@ macro_rules! REDIS_COMMAND_TABLE (
 
             $(
                 redisCommand {
-                    name: $name as *const u8,
+                    name: concat_bytes!($name, b'\0') as *const u8,
                     proc_: $func,
                     arity: $arity,
-                    sflags: $sflags as *const u8,
+                    sflags: concat_bytes!($sflags, b'\0') as *const u8,
                     flags: 0,
                     getkeys_proc: $getkey,
                     firstkey: $firstkey,

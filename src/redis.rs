@@ -1,5 +1,7 @@
 use libc::c_void;
 
+pub type Client = *const c_void;
+
 extern {
     fn addReplyString(client: *const c_void, s: *const u8, len: usize);
 }
