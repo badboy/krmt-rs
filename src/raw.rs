@@ -1,7 +1,7 @@
 macro_rules! REDIS_MODULE_DETAIL (
     ($name:expr, $module_version:expr, $load:expr, $cleanup:expr) => (
         const REDIS_MODULE_COMMAND : libc::c_int = 1;
-        const REDIS_VERSION : *const u8 = b"2.9.999" as *const u8;
+        const REDIS_VERSION : *const u8 = b"2.9.999\0" as *const u8;
 
         #[no_mangle]
         #[allow(non_upper_case_globals)]
