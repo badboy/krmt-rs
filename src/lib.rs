@@ -19,7 +19,7 @@ REDIS_MODULE_DETAIL!(
     "de.fnordig.test.rust",
     "0.0001",
     Some(load),
-    None
+    Some(cleanup)
 );
 
 REDIS_COMMAND_TABLE!(
@@ -39,4 +39,9 @@ pub extern "C" fn load() -> *const libc::c_void {
     println!("Rust Module loaded");
 
     null()
+}
+
+#[no_mangle]
+pub extern "C" fn cleanup() {
+    println!("Rust Module cleaned up");
 }
