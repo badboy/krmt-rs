@@ -14,7 +14,12 @@ use structs::{redisCommand,redisModule};
 const REDIS_MODULE_COMMAND : c_int = 1;
 const REDIS_VERSION : *const u8 = b"2.9.999" as *const u8;
 
-REDIS_MODULE_DETAIL!(b"de.fnordig.test.rust\0", b"0.0001\0", Some(load), None);
+REDIS_MODULE_DETAIL!(
+    b"de.fnordig.test.rust\0",
+    b"0.0001\0",
+    Some(load),
+    None
+);
 
 REDIS_COMMAND_TABLE!(
     2,
