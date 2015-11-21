@@ -4,7 +4,6 @@
 #![plugin(concat_bytes)]
 
 extern crate libc;
-use libc::c_int;
 
 #[macro_use]
 mod raw;
@@ -12,7 +11,6 @@ mod structs;
 mod redis;
 
 use redis::Client;
-
 use structs::{redisCommand,redisModule};
 
 REDIS_MODULE_DETAIL!(
