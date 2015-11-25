@@ -1,6 +1,6 @@
-use libc::c_void;
+use super::structs::redisClient;
 
-pub type Client = *const c_void;
+pub type Client = *const redisClient;
 
 extern {
     fn addReplyString(client: Client, s: *const u8, len: usize);

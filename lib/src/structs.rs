@@ -1,11 +1,12 @@
 use libc::{c_void, c_int, c_long, c_longlong, c_ulong, time_t, c_char};
 use std::ptr;
+use super::redis::Client;
 
 #[repr(C)]
 #[allow(dead_code)]
 pub struct redisCommand {
     pub name: *const u8,
-    pub proc_: Option<extern "C" fn(*const c_void)>,
+    pub proc_: Option<extern "C" fn(Client)>,
     pub arity: c_int,
     pub sflags: *const u8,
     pub flags: c_int,
@@ -80,6 +81,7 @@ pub struct redisClient {
 // It's not
 unsafe impl Sync for redisCommand {}
 unsafe impl Sync for redisModule {}
+unsafe impl Sync for redisClient {}
 
 impl redisCommand {
     #[allow(dead_code)]
