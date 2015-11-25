@@ -16,4 +16,4 @@ git = "https://github.com/badboy/concat_bytes"
 branch = "binary-to-bytestr"
 
 [dependencies.redis_dynamic]
-path = "../lib"
+path = "../redis_dynamic"
