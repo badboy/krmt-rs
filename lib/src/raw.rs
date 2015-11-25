@@ -1,3 +1,4 @@
+#[macro_export]
 macro_rules! REDIS_MODULE_DETAIL (
     ($name:expr, $module_version:expr, $load:expr, $cleanup:expr) => (
         const REDIS_MODULE_COMMAND : libc::c_int = 1;
@@ -16,6 +17,7 @@ macro_rules! REDIS_MODULE_DETAIL (
     )
 );
 
+#[macro_export]
 macro_rules! REDIS_COMMAND_TABLE (
     ($n:expr, $([$name:expr, $func:expr, $arity:expr, $sflags:expr, $getkey:expr, $firstkey:expr, $lastkey:expr, $keystep:expr]),+) => (
         #[no_mangle]
