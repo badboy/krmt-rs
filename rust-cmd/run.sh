@@ -13,4 +13,4 @@ set -x
 cargo build && \
 cp target/debug/libpong.so . && \
 redis-cli config set module-add $(pwd)/libpong.so && \
-redis-cli rust
+redis-cli rust foo
