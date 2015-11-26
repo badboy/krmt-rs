@@ -39,8 +39,8 @@ pub struct redisClient {
     name: *const c_void,
     querybuf: *const c_void,
     querybuf_peak: usize,
-    argc: c_int,
-    argv: *const *const c_void,
+    pub argc: c_int,
+    pub argv: *const *const robj,
     cmd: *const c_void,
     lastcmd: *const c_void,
     reqtype: c_int,
@@ -75,6 +75,26 @@ pub struct redisClient {
     peerid: *const c_void,
     bufpos: c_int,
     buf: [u8; (16*1024)]
+}
+
+#[repr(C)]
+#[allow(dead_code)]
+pub struct robj {
+    pub type_encoding: u8,
+    pub lru: [u8; 3],
+    pub refcount: c_int,
+    pub ptr: *const c_void
+}
+
+impl robj {
+    pub fn empty() -> robj {
+        robj {
+            type_encoding: 0,
+            lru: [0; 3],
+            refcount: 0,
+            ptr: ptr::null()
+        }
+    }
 }
 
 
