@@ -39,12 +39,13 @@ REDIS_MODULE_DETAIL!(
 );
 
 REDIS_COMMAND_TABLE!(
-    5,
+    6,
     ["fstadd", Some(fstadd), 3, "rt", None, 0, 0, 0],
     ["fstfinish", Some(fstfinish), 2, "rt", None, 0, 0, 0],
     ["fstlen", Some(fstlen), 2, "rt", None, 0, 0, 0],
     ["fstdel", Some(fstdel), -2, "rt", None, 0, 0, 0],
-    ["fstkeys", Some(fstkeys), 1, "rt", None, 0, 0, 0]
+    ["fstkeys", Some(fstkeys), 1, "rt", None, 0, 0, 0],
+    ["fstismember", Some(fstismember), 3, "rt", None, 0, 0, 0]
 );
 
 #[no_mangle]
@@ -171,6 +172,47 @@ pub extern "C" fn fstlen(client: Client) {
         &Set(ref s) => {
             redis::integer_reply(client, s.len() as i64);
             return;
+        },
+    };
+}
+
+#[no_mangle]
+pub extern "C" fn fstismember(client: Client) {
+    let mut args = redis::args(client).into_iter();
+    args.next().unwrap(); // Drop command name
+
+    let key = args.next().unwrap();
+    let database = DATABASE.lock().unwrap();
+    let val = database.get(&key);
+
+    let val = match val {
+        Some(val) => val,
+        None => {
+            redis::integer_reply(client, 0);
+            return;
+        },
+    };
+
+    let member = args.next().unwrap();
+    let member = match from_utf8(&member) {
+        Err(_) => {
+            redis::error_reply(client, "Member is not valid UTF-8");
+            return;
+        },
+        Ok(v) => v
+    };
+
+    match val {
+        &Builder(_) => {
+            redis::error_reply(client, "Can't check unfinished set");
+            return;
+        },
+        &Set(ref s) => {
+            if s.contains(member) {
+                redis::integer_reply(client, 1);
+            } else {
+                redis::integer_reply(client, 0);
+            }
         },
     };
 }
