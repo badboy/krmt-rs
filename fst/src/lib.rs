@@ -11,6 +11,7 @@ extern crate lazy_static;
 extern crate fst;
 
 use std::ptr::null;
+use std::str::from_utf8;
 use std::collections::HashMap;
 
 use redis_dynamic::structs::*;
@@ -27,7 +28,7 @@ enum FstValue {
 }
 
 lazy_static!{
-    static ref DATABASE : Mutex<HashMap<String, FstValue>> = Mutex::new(HashMap::new());
+    static ref DATABASE : Mutex<HashMap<Vec<u8>, FstValue>> = Mutex::new(HashMap::new());
 }
 
 REDIS_MODULE_DETAIL!(
@@ -38,52 +39,67 @@ REDIS_MODULE_DETAIL!(
 );
 
 REDIS_COMMAND_TABLE!(
-    3,
+    5,
     ["fstadd", Some(fstadd), 3, "rt", None, 0, 0, 0],
     ["fstfinish", Some(fstfinish), 2, "rt", None, 0, 0, 0],
-    ["fstlen", Some(fstlen), 2, "rt", None, 0, 0, 0]
+    ["fstlen", Some(fstlen), 2, "rt", None, 0, 0, 0],
+    ["fstdel", Some(fstdel), -2, "rt", None, 0, 0, 0],
+    ["fstkeys", Some(fstkeys), 1, "rt", None, 0, 0, 0]
 );
 
 #[no_mangle]
 pub extern "C" fn fstadd(client: Client) {
-    let key = "hello".to_owned();
+    let mut args = redis::args(client).into_iter();
+    args.next().unwrap(); // Drop command name
+
+    let key = args.next().unwrap();
     let mut database = DATABASE.lock().unwrap();
-    let mut val = database.entry(key).or_insert(
+    let mut builder = database.entry(key).or_insert(
         Builder(fst::SetBuilder::memory()));
 
-    match val {
+    let value = args.next().unwrap();
+    let value = match from_utf8(&value) {
+        Err(_) => {
+            redis::error_reply(client, "Value is not valid UTF-8");
+            return;
+        },
+        Ok(v) => v
+    };
+
+    match builder {
         &mut Set(_) => {
-            let hello = "-Can't modify finished set";
-            redis::add_reply(client, hello);
+            redis::error_reply(client, "Can't modify finished set");
             return;
         },
         &mut Builder(ref mut b) => {
-            b.insert("hello").unwrap();
-            let hello = "+OK";
-            redis::add_reply(client, hello);
-        },
+            match b.insert(value) {
+                Err(e) => redis::error_reply(client, &format!("{:?}", e)),
+                Ok(_)  => redis::ok_reply(client)
+            }
+        }
     };
 }
 
 #[no_mangle]
 pub extern "C" fn fstfinish(client: Client) {
-    let key = "hello".to_owned();
+    let mut args = redis::args(client).into_iter();
+    args.next().unwrap(); // Drop command name
+
+    let key = args.next().unwrap();
     let mut database = DATABASE.lock().unwrap();
     let val = database.remove(&key);
 
     let val = match val {
         Some(val) => val,
         None => {
-            let hello = "-Can't finish empty set";
-            redis::add_reply(client, hello);
+            redis::error_reply(client, "Can't finish empty set");
             return;
         },
     };
 
     let builder = match val {
         Set(_) => {
-            let hello = "-Can't modify finished set";
-            redis::add_reply(client, hello);
+            redis::error_reply(client, "Can't modify finished set");
             return;
         },
         Builder(b) => b,
@@ -93,34 +109,67 @@ pub extern "C" fn fstfinish(client: Client) {
     let set = fst::Set::from_bytes(bytes).unwrap();
     database.insert(key, Set(set));
 
-    let hello = "+OK";
-    redis::add_reply(client, hello);
+    redis::ok_reply(client);
+}
+
+#[no_mangle]
+pub extern "C" fn fstdel(client: Client) {
+    let mut args = redis::args(client).into_iter();
+    args.next().unwrap(); // Drop command name
+
+    let mut deleted = 0;
+    for key in args {
+        let mut database = DATABASE.lock().unwrap();
+        let val = database.remove(&key);
+
+        if let Some(_) = val {
+            deleted += 1;
+        }
+    }
+
+    redis::integer_reply(client, deleted);
+}
+
+#[no_mangle]
+pub extern "C" fn fstkeys(client: Client) {
+    let database = DATABASE.lock().unwrap();
+
+    let keys = database.keys();
+    let len = keys.len();
+
+    redis::add_reply(client, &format!("*{}", len));
+
+    for key in keys {
+        let len = key.len();
+        redis::add_reply(client, &format!("${}", len));
+        redis::add_reply_bytes(client, key);
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn fstlen(client: Client) {
-    let key = "hello".to_owned();
+    let mut args = redis::args(client).into_iter();
+    args.next().unwrap(); // Drop command name
+
+    let key = args.next().unwrap();
     let database = DATABASE.lock().unwrap();
     let val = database.get(&key);
 
     let val = match val {
         Some(val) => val,
         None => {
-            let hello = ":0";
-            redis::add_reply(client, hello);
+            redis::integer_reply(client, 0);
             return;
         },
     };
 
     match val {
         &Builder(_) => {
-            let hello = "-Can't get len of unfinished set";
-            redis::add_reply(client, hello);
+            redis::error_reply(client, "Can't get len of unfinished set");
             return;
         },
         &Set(ref s) => {
-            let hello = format!(":{}", s.len());
-            redis::add_reply(client, &hello);
+            redis::integer_reply(client, s.len() as i64);
             return;
         },
     };
