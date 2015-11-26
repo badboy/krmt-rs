@@ -3,35 +3,53 @@ use super::structs::redisClient;
 
 pub type Client = *const redisClient;
 
+pub struct Handle {
+    client: Client
+}
+
+impl Handle {
+    pub fn new(client: Client) -> Handle {
+        Handle {
+            client: client
+        }
+    }
+
+    pub fn args(&self) -> Vec<Vec<u8>> {
+        args(self.client)
+    }
+
+    pub fn add_reply(&self, reply: &str) {
+        unsafe {
+            let reply = format!("{}\r\n\0", reply);
+            let bytes = reply.as_bytes();
+            addReplyString(self.client, bytes.as_ptr(), bytes.len() - 1);
+        }
+    }
+    pub fn add_reply_bytes(&self, reply: &[u8]) {
+        unsafe {
+            addReplyString(self.client,
+                           reply as *const _ as *const u8,
+                           reply.len());
+            addReplyString(self.client, b"\r\n\0" as *const u8, 2);
+        }
+    }
+
+    pub fn error_reply(&self, reply: &str) {
+        self.add_reply(&format!("-{}", reply));
+    }
+    pub fn status_reply(&self, reply: &str) {
+        self.add_reply(&format!("+{}", reply));
+    }
+    pub fn integer_reply(&self, reply: i64) {
+        self.add_reply(&format!(":{}", reply));
+    }
+    pub fn ok_reply(&self) {
+        self.add_reply("+OK");
+    }
+}
+
 extern {
     fn addReplyString(client: Client, s: *const u8, len: usize);
-}
-
-pub fn add_reply(client: Client, reply: &str) {
-    unsafe {
-        let reply = format!("{}\r\n\0", reply);
-        let bytes = reply.as_bytes();
-        addReplyString(client, bytes.as_ptr(), bytes.len() - 1);
-    }
-}
-pub fn add_reply_bytes(client: Client, reply: &[u8]) {
-    unsafe {
-        addReplyString(client, reply as *const _ as *const u8, reply.len());
-        addReplyString(client, b"\r\n\0" as *const u8, 2);
-    }
-}
-
-pub fn error_reply(client: Client, reply: &str) {
-    add_reply(client, &format!("-{}", reply));
-}
-pub fn status_reply(client: Client, reply: &str) {
-    add_reply(client, &format!("+{}", reply));
-}
-pub fn integer_reply(client: Client, reply: i64) {
-    add_reply(client, &format!(":{}", reply));
-}
-pub fn ok_reply(client: Client) {
-    add_reply(client, "+OK");
 }
 
 unsafe fn sds_to_vec(s: *const u8) -> Vec<u8> {

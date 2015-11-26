@@ -10,8 +10,7 @@ extern crate redis_dynamic;
 use std::ptr::null;
 
 use redis_dynamic::structs::*;
-use redis_dynamic::redis;
-use redis_dynamic::redis::Client;
+use redis_dynamic::redis::{Client, Handle};
 
 REDIS_MODULE_DETAIL!(
     "de.fnordig.test.rust",
@@ -28,11 +27,12 @@ REDIS_COMMAND_TABLE!(
 
 #[no_mangle]
 pub extern "C" fn rust_command(client: Client) {
-    let args = redis::args(client);
+    let client = Handle::new(client);
+    let args = client.args();
     println!("ARGS: {:?}", args);
 
     let hello = "+Hello, this is Rust!";
-    redis::add_reply(client, hello)
+    client.add_reply(hello)
 }
 
 #[no_mangle]

@@ -15,8 +15,7 @@ use std::str::from_utf8;
 use std::collections::HashMap;
 
 use redis_dynamic::structs::*;
-use redis_dynamic::redis;
-use redis_dynamic::redis::Client;
+use redis_dynamic::redis::{Client,Handle};
 
 use std::sync::Mutex;
 
@@ -50,7 +49,8 @@ REDIS_COMMAND_TABLE!(
 
 #[no_mangle]
 pub extern "C" fn fstadd(client: Client) {
-    let mut args = redis::args(client).into_iter();
+    let client = Handle::new(client);
+    let mut args = client.args().into_iter();
     args.next().unwrap(); // Drop command name
 
     let key = args.next().unwrap();
@@ -61,7 +61,7 @@ pub extern "C" fn fstadd(client: Client) {
     let value = args.next().unwrap();
     let value = match from_utf8(&value) {
         Err(_) => {
-            redis::error_reply(client, "Value is not valid UTF-8");
+            client.error_reply("Value is not valid UTF-8");
             return;
         },
         Ok(v) => v
@@ -69,13 +69,13 @@ pub extern "C" fn fstadd(client: Client) {
 
     match builder {
         &mut Set(_) => {
-            redis::error_reply(client, "Can't modify finished set");
+            client.error_reply("Can't modify finished set");
             return;
         },
         &mut Builder(ref mut b) => {
             match b.insert(value) {
-                Err(e) => redis::error_reply(client, &format!("{:?}", e)),
-                Ok(_)  => redis::ok_reply(client)
+                Err(e) => client.error_reply(&format!("{:?}", e)),
+                Ok(_)  => client.ok_reply()
             }
         }
     };
@@ -83,7 +83,8 @@ pub extern "C" fn fstadd(client: Client) {
 
 #[no_mangle]
 pub extern "C" fn fstfinish(client: Client) {
-    let mut args = redis::args(client).into_iter();
+    let client = Handle::new(client);
+    let mut args = client.args().into_iter();
     args.next().unwrap(); // Drop command name
 
     let key = args.next().unwrap();
@@ -93,14 +94,14 @@ pub extern "C" fn fstfinish(client: Client) {
     let val = match val {
         Some(val) => val,
         None => {
-            redis::error_reply(client, "Can't finish empty set");
+            client.error_reply("Can't finish empty set");
             return;
         },
     };
 
     let builder = match val {
         Set(_) => {
-            redis::error_reply(client, "Can't modify finished set");
+            client.error_reply("Can't modify finished set");
             return;
         },
         Builder(b) => b,
@@ -110,12 +111,13 @@ pub extern "C" fn fstfinish(client: Client) {
     let set = fst::Set::from_bytes(bytes).unwrap();
     database.insert(key, Set(set));
 
-    redis::ok_reply(client);
+    client.ok_reply();
 }
 
 #[no_mangle]
 pub extern "C" fn fstdel(client: Client) {
-    let mut args = redis::args(client).into_iter();
+    let client = Handle::new(client);
+    let mut args = client.args().into_iter();
     args.next().unwrap(); // Drop command name
 
     let mut deleted = 0;
@@ -128,28 +130,30 @@ pub extern "C" fn fstdel(client: Client) {
         }
     }
 
-    redis::integer_reply(client, deleted);
+    client.integer_reply(deleted);
 }
 
 #[no_mangle]
 pub extern "C" fn fstkeys(client: Client) {
+    let client = Handle::new(client);
     let database = DATABASE.lock().unwrap();
 
     let keys = database.keys();
     let len = keys.len();
 
-    redis::add_reply(client, &format!("*{}", len));
+    client.add_reply(&format!("*{}", len));
 
     for key in keys {
         let len = key.len();
-        redis::add_reply(client, &format!("${}", len));
-        redis::add_reply_bytes(client, key);
+        client.add_reply(&format!("${}", len));
+        client.add_reply_bytes(key);
     }
 }
 
 #[no_mangle]
 pub extern "C" fn fstlen(client: Client) {
-    let mut args = redis::args(client).into_iter();
+    let client = Handle::new(client);
+    let mut args = client.args().into_iter();
     args.next().unwrap(); // Drop command name
 
     let key = args.next().unwrap();
@@ -159,18 +163,18 @@ pub extern "C" fn fstlen(client: Client) {
     let val = match val {
         Some(val) => val,
         None => {
-            redis::integer_reply(client, 0);
+            client.integer_reply(0);
             return;
         },
     };
 
     match val {
         &Builder(_) => {
-            redis::error_reply(client, "Can't get len of unfinished set");
+            client.error_reply("Can't get len of unfinished set");
             return;
         },
         &Set(ref s) => {
-            redis::integer_reply(client, s.len() as i64);
+            client.integer_reply(s.len() as i64);
             return;
         },
     };
@@ -178,7 +182,8 @@ pub extern "C" fn fstlen(client: Client) {
 
 #[no_mangle]
 pub extern "C" fn fstismember(client: Client) {
-    let mut args = redis::args(client).into_iter();
+    let client = Handle::new(client);
+    let mut args = client.args().into_iter();
     args.next().unwrap(); // Drop command name
 
     let key = args.next().unwrap();
@@ -188,7 +193,7 @@ pub extern "C" fn fstismember(client: Client) {
     let val = match val {
         Some(val) => val,
         None => {
-            redis::integer_reply(client, 0);
+            client.integer_reply(0);
             return;
         },
     };
@@ -196,7 +201,7 @@ pub extern "C" fn fstismember(client: Client) {
     let member = args.next().unwrap();
     let member = match from_utf8(&member) {
         Err(_) => {
-            redis::error_reply(client, "Member is not valid UTF-8");
+            client.error_reply("Member is not valid UTF-8");
             return;
         },
         Ok(v) => v
@@ -204,14 +209,14 @@ pub extern "C" fn fstismember(client: Client) {
 
     match val {
         &Builder(_) => {
-            redis::error_reply(client, "Can't check unfinished set");
+            client.error_reply("Can't check unfinished set");
             return;
         },
         &Set(ref s) => {
             if s.contains(member) {
-                redis::integer_reply(client, 1);
+                client.integer_reply(1);
             } else {
-                redis::integer_reply(client, 0);
+                client.integer_reply(0);
             }
         },
     };
